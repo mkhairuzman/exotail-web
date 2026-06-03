@@ -183,7 +183,7 @@ ul{margin:0;padding:0;list-style:none}
    over the dark hero; no border/box/frame. Full 16:9 frame shown
    (object-fit:contain) so nothing reads as cropped. */
 .axo-video{
-  grid-area:1/1;width:100%;height:100%;object-fit:contain;display:block;
+  grid-area:1/1;width:100%;height:100%;object-fit:contain;display:block;background:transparent;
   pointer-events:none;-webkit-user-drag:none;
   filter:drop-shadow(0 22px 26px rgba(0,0,0,.4));
   transition:none;                 /* instant start->idle switch, no fade */
