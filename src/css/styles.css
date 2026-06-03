@@ -164,8 +164,13 @@ ul{margin:0;padding:0;list-style:none}
 }
 .axo-stage:focus-visible{outline:none}
 
-/* mount holds exactly one mascot image, centered */
-.axo-mount{display:grid;place-items:center;width:100%;height:100%;grid-template:1fr/1fr}
+/* mount holds the mascot layers, centered. Entrance motion lives here so the
+   same idle render is visible from the first frame. */
+.axo-mount{
+  display:grid;place-items:center;width:100%;height:100%;grid-template:1fr/1fr;
+  transform-origin:50% 62%;
+  will-change:transform,opacity;
+}
 
 /* the one final mascot — entrance, then gentle idle float + breathe */
 .axo-img{
@@ -178,8 +183,8 @@ ul{margin:0;padding:0;list-style:none}
   will-change:transform;
 }
 
-/* hero mascot video — two stacked layers (start swim-in + looping idle),
-   same box/scale/object-fit so the crossfade aligns. Transparent webm
+/* hero mascot video — stacked start + idle + click-wave layers,
+   same box/scale/object-fit so the transition aligns. Transparent webm
    over the dark hero; no border/box/frame. Full 16:9 frame shown
    (object-fit:contain) so nothing reads as cropped. */
 .axo-video{
@@ -194,26 +199,18 @@ ul{margin:0;padding:0;list-style:none}
   transform:translateX(-3%) scale(1.4);
   transform-origin:50% 52%;
 }
-.axo-start{z-index:3;opacity:1}            /* shown first */
-/* idle is a reverse-first ping-pong of the idle clip, so its first frame (B)
-   already equals the start clip's final frame — no align transform needed */
-.axo-idle{z-index:2;opacity:0}
-/* instant switch (no fade): start hidden, idle shown in one frame.
-   Seamless because idle frame 0 (B) == start's final frame */
-.axo-stage.axo-idle-on .axo-start{opacity:0}
-.axo-stage.axo-idle-on .axo-idle{opacity:1}
-
-/* wave-hand: instant switch, only ONE mascot visible. When waving, idle (and
-   start) are fully hidden — no opacity overlap, no ghosting. Slight scale
-   (.95) + y nudge aligns the wave pose to the idle pose. */
-.axo-wave{z-index:4;opacity:0;visibility:hidden;
-  transform:translateX(-3%) translateY(-2.2%) scale(1.33)}
+.axo-start{z-index:3;opacity:0;visibility:hidden;transition:opacity .38s ease}
+.axo-idle{z-index:2;opacity:0;visibility:hidden}
+.axo-wave{z-index:4;opacity:0;visibility:hidden;transform:translateX(-3%) translateY(-2.2%) scale(1.33)}
+.axo-stage.axo-start-on .axo-start{opacity:1;visibility:visible}
+.axo-stage.axo-idle-on .axo-start{opacity:0;visibility:hidden}
+.axo-stage.axo-idle-on .axo-idle{opacity:1;visibility:visible}
 .axo-stage.axo-wave-on .axo-wave{opacity:1;visibility:visible}
 .axo-stage.axo-wave-on .axo-idle{opacity:0;visibility:hidden}
 .axo-stage.axo-wave-on .axo-start{opacity:0;visibility:hidden}
 
 /* "Klik aku!" hint bubble — centered ABOVE the mascot's head, tail pointing
-   down. Shown in idle state, hidden during start/wave. */
+   down. Shown briefly in idle state. */
 .axo-hint{
   position:absolute;top:-8%;left:50%;z-index:6;pointer-events:none;
   padding:8px 15px;border-radius:999px;white-space:nowrap;
@@ -252,7 +249,7 @@ ul{margin:0;padding:0;list-style:none}
 .axo-reaction-bubble.b2{left:76%;top:35%;width:6px;height:6px}
 .axo-reaction-bubble.b3{left:25%;top:26%;width:7px;height:7px}
 
-/* hover / focus: gentle premium response — scale + bounce + brighter glow + bubbles */
+/* hover / focus: gentle premium response on the same mascot — no video swap */
 .axo-stage:hover,.axo-stage:focus-visible{transform:scale(1.05) rotate(-1deg)}
 .axo-stage:hover .axo-glow,.axo-stage:focus-visible .axo-glow{filter:blur(18px) brightness(1.5)}
 .axo-stage:hover .axo-img,.axo-stage:focus-visible .axo-img{animation:axoEntrance 1s cubic-bezier(.16,.9,.22,1.12) both, axoFloat 3.4s ease-in-out infinite}
@@ -449,8 +446,7 @@ ul{margin:0;padding:0;list-style:none}
 .cta-axo{width:150px;margin:0 auto 8px;position:relative}
 .cta-axo{width:210px}
 .cta-axo .axo-stage{width:100%;aspect-ratio:16/9;cursor:default}
-/* CTA wave: looping greeting, own modest scale (not the hero's big transform) */
-.cta-axo .axo-video{transform:scale(1.3)}
+.cta-axo .axo-img{width:100%;height:100%;object-fit:contain}
 
 /* ============================================================
    FOOTER
@@ -514,7 +510,6 @@ html.js .reveal.in{opacity:1;animation:revealRise .7s var(--ease) both}
     inline-size:clamp(260px,52vw,460px)}
   .axo-stage{max-width:none}
   .axo-video{transform:scale(1.12)}
-  .axo-wave{transform:translateY(-2.2%) scale(1.06)}
   .axo-hint{font-size:13px;top:-4%;padding:7px 13px}
   /* calmer background on small screens */
   .aquarium .ring.r2{display:none}

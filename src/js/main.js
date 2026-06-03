@@ -29,13 +29,12 @@
   });
 })();
 
-/* ===== Axolotl video mascot — start -> idle flow =====
-   Hero mount holds two stacked <video> layers (.axo-start, .axo-idle).
-   On load: play the start (swim-in) once, then crossfade into the
-   looping idle. Idle is preloaded so the swap has no blank/black frame.
+/* ===== Axolotl video mascot — start -> idle -> click wave -> idle =====
+   Hero mount holds three transparent WebM layers: start, idle, and wave.
+   On load: play the start video once, then switch to the looping idle.
    Mounts without video (e.g. CTA) get the static PNG mascot instead.
-   prefers-reduced-motion: skip the start, show the idle pose statically.
-   Any failure (no codec / autoplay blocked) falls through to idle. */
+   prefers-reduced-motion: skip start/wave and show the idle pose statically.
+   Click can play the transparent WebM wave layer once, then return to idle. */
 (function(){
   var PNG = '/assets/mascot/axolotl-mascot.png';
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -43,7 +42,7 @@
   document.querySelectorAll('.axo-mount').forEach(function(mount){
     var idleV = mount.querySelector('.axo-idle');
     if(idleV){ initVideoMascot(mount, mount.querySelector('.axo-start'), idleV); }
-    else if(!mount.querySelector('video')){ injectPng(mount); } // CTA wave video plays on its own
+    else if(!mount.querySelector('video')){ injectPng(mount); }
   });
 
   function injectPng(mount){
@@ -65,21 +64,20 @@
     var stage = mount.closest('.axo-stage');
     var waveV = mount.querySelector('.axo-wave');
     var switched = false, idleReady = false;
+    var START_OFFSET = 1.55;
 
     idleV.muted = true;
     idleV.loop = true;
-    try { idleV.load(); } catch(e){}           // preload idle in the background
+    try { idleV.load(); } catch(e){}
 
     var toIdle = function(){
-      if(switched) return; switched = true;
-      try { idleV.currentTime = 0; } catch(e){} // idle frame 0 (B) == start's last frame
+      if(switched) return;
+      switched = true;
       var p = idleV.play();
       if(p && p.catch){ p.catch(function(){}); }
-      // INSTANT switch — no fade. Flip visibility in one frame; start holds
-      // its last frame underneath, idle's first frame is identical, so it's seamless.
       stage.classList.add('axo-idle-on');
       try { startV && startV.pause(); } catch(e){}
-      idleReady = true;                         // wave interaction allowed from here
+      idleReady = true;
       showHintSoon();                           // "Klik aku!" once idle begins
     };
 
@@ -101,7 +99,7 @@
       stage.classList.remove('axo-hint-on');
     }
 
-    // Reduced motion: no swim-in, no wave — just the idle pose.
+    // Reduced motion: just the idle pose.
     if(reduce){
       if(startV){ startV.remove(); }
       if(waveV){ waveV.remove(); }
@@ -111,50 +109,67 @@
 
     if(startV){
       startV.muted = true;
-      startV.addEventListener('ended', toIdle); // switch the instant start finishes (at B)
-      startV.addEventListener('error', toIdle); // can't play start -> go straight to idle
-      var ps = startV.play();
-      if(ps && ps.catch){ ps.catch(toIdle); }   // autoplay blocked -> idle
-      setTimeout(toIdle, 12000);                // safety net
+      try { startV.load(); } catch(e){}
+      startV.addEventListener('ended', toIdle);
+      startV.addEventListener('error', toIdle);
+      var startShown = false;
+      var showAndPlayStart = function(){
+        if(switched || startShown) return;
+        startShown = true;
+        stage.classList.add('axo-start-on');
+        var startPlay = startV.play();
+        if(startPlay && startPlay.catch){ startPlay.catch(toIdle); }
+      };
+      var seekAndPlayStart = function(){
+        try { startV.currentTime = START_OFFSET; } catch(e){}
+        startV.addEventListener('seeked', showAndPlayStart, { once:true });
+        setTimeout(showAndPlayStart, 450);
+      };
+      if(startV.readyState >= 1){ seekAndPlayStart(); }
+      else { startV.addEventListener('loadedmetadata', seekAndPlayStart, { once:true }); }
+      setTimeout(toIdle, 12000);
     } else {
       toIdle();
     }
 
-    // ----- Wave-hand interaction (overlays the looping idle) -----
+    stage.addEventListener('mouseenter', hideHint);
+    stage.addEventListener('focusin', hideHint);
+
     if(waveV){
       var waving = false;
       waveV.muted = true;
-      try { waveV.load(); } catch(e){}          // preload so there's no hover/tap delay
-      var endWave = function(){
+      try { waveV.load(); } catch(e){}
+
+      function endWave(){
         if(!waving) return;
-        // reset idle to frame 0 (B) — matches the wave's final sitting pose —
-        // and have it playing BEFORE we reveal it, so the swap is seamless
         idleV.playbackRate = 1;
         try { idleV.currentTime = 0; } catch(e){}
-        try { idleV.play(); } catch(e){}
-        stage.classList.remove('axo-wave-on');   // instant swap back to idle
-        try { waveV.pause(); } catch(e){}         // wave hidden + stopped
+        try {
+          var idlePlay = idleV.play();
+          if(idlePlay && idlePlay.catch){ idlePlay.catch(function(){}); }
+        } catch(e){}
+        stage.classList.remove('axo-wave-on');
+        try { waveV.pause(); } catch(e){}
         waving = false;
-        // note: hint is NOT shown again after waving (once per session only)
-      };
-      var playWave = function(){
-        if(!idleReady || waving) return;        // not before start ends; ignore while waving
+      }
+
+      function playWave(){
+        if(!idleReady || waving) return;
         waving = true;
-        hideHint();                              // bubble off during wave
-        try { idleV.pause(); } catch(e){}        // hide + stop idle (no ghosting behind wave)
+        hideHint();
+        try { idleV.pause(); } catch(e){}
         try { waveV.currentTime = 0; } catch(e){}
-        waveV.playbackRate = 1.35;               // happier, more energetic wave
-        var pw = waveV.play();
-        if(pw && pw.catch){ pw.catch(endWave); }
-        stage.classList.add('axo-wave-on');     // ONLY the wave video is visible now
-      };
-      waveV.addEventListener('ended', endWave);  // return to idle
+        waveV.playbackRate = 1.2;
+        stage.classList.add('axo-wave-on');
+        try {
+          var wavePlay = waveV.play();
+          if(wavePlay && wavePlay.catch){ wavePlay.catch(endWave); }
+        } catch(e){ endWave(); }
+      }
+
+      waveV.addEventListener('ended', endWave);
       waveV.addEventListener('error', endWave);
-      // desktop = hover; touch = tap. Avoid double-trigger on touch devices.
-      var hoverDev = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
-      if(hoverDev){ stage.addEventListener('mouseenter', playWave); }
-      else { stage.addEventListener('click', playWave); }
-      // keyboard accessibility: Enter / Space triggers the wave
+      stage.addEventListener('click', playWave);
       stage.addEventListener('keydown', function(e){
         if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); playWave(); }
       });
