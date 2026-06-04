@@ -42,14 +42,21 @@
   var MOBILE_WAVE = '/animation/axolotl-wave-mobile.webp';
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var ua = navigator.userAgent || '';
+  var vendor = navigator.vendor || '';
+  // Only some engines render the transparent VP9-alpha WebM correctly. WebKit
+  // (every iOS browser + macOS Safari) plays it but mangles the alpha channel,
+  // leaving a green/teal matte fringe around the mascot. Rather than blacklist
+  // the many ways an Apple browser can disguise itself (in-app webviews,
+  // desktop-mode UA, missing vendor), WHITELIST the known-good engines: real
+  // Chrome/Chromium/Edge/Firefox that are not WebKit and not iOS. Everything
+  // else — Safari, iOS, webviews, anything ambiguous — gets the clean static
+  // WebP poster so the green-screen video can never display.
+  var isApple = /Apple/.test(vendor);
   var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  // WebKit (all iOS browsers + macOS Safari) plays VP9-alpha WebM but renders
-  // the alpha channel wrong → green/teal matte fringe around the mascot.
-  // navigator.vendor starts with "Apple" only on WebKit; Chrome/Firefox/Edge
-  // on non-Apple engines report "Google Inc."/"". Use the static WebP poster
-  // for any WebKit browser so the green-screen video never displays.
-  var isWebKit = /Apple/.test(navigator.vendor || '');
-  var usePosterFallback = isIOS || isWebKit;
+  // CriOS/FxiOS/EdgiOS are WebKit under the hood, so exclude them explicitly.
+  var isGoodVideoEngine = /Chrome|Chromium|CriOS|Edg|Firefox|FxiOS/.test(ua) &&
+                          !isApple && !isIOS && !/CriOS|FxiOS|EdgiOS/.test(ua);
+  var usePosterFallback = !isGoodVideoEngine;
 
   document.querySelectorAll('.axo-mount').forEach(function(mount){
     var idleV = mount.querySelector('.axo-idle');
