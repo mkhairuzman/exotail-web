@@ -258,6 +258,12 @@ ul{margin:0;padding:0;list-style:none}
 .axo-stage:hover .axo-reaction-bubble.b3,.axo-stage:focus-within .axo-reaction-bubble.b3{animation-delay:.4s}
 .axo-stage.axo-mobile-poster-fallback .axo-img{
   width:100%;height:100%;object-fit:contain;
+  /* iOS Safari rasterizes filter+alpha against an opaque compositing backing,
+     producing a matte/ghost box around the sprite. The shadow is invisible on
+     the dark hero anyway, so drop it (and will-change) on the static poster. */
+  filter:none;
+  will-change:auto;
+  background:transparent;
   animation:axoMobilePosterEntrance 1.05s cubic-bezier(.16,.9,.22,1.12) both,
             axoFloat 6s ease-in-out 1.05s infinite;
 }
