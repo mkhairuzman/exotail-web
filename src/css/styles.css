@@ -512,13 +512,13 @@ html.js .reveal.in{opacity:1;animation:revealRise .7s var(--ease) both}
   .offers-grid{grid-template-columns:repeat(2,1fr)}
   .type-card{flex-basis:calc((100% - 24px)/2)}   /* tablet: 2 per view */
 }
-/* TABLET + MOBILE: stacked hero (mascot on top), centered copy.
+/* TABLET + MOBILE: stacked hero with copy first, then mascot.
    Two-column hero only on desktop (>=1025px) to avoid tablet cropping. */
 @media(max-width:1024px){
   .hero{padding:44px 0 64px}
-  .hero-grid{grid-template-columns:1fr;gap:10px;text-align:center}
-  .hero-visual{order:-1}                  /* mascot first */
-  .hero-copy{order:1;max-width:600px;margin-inline:auto}
+  .hero-grid{grid-template-columns:1fr;gap:34px;text-align:center}
+  .hero-copy{max-width:600px;margin-inline:auto}
+  .hero-visual{max-width:520px;margin-inline:auto}
   .hero-sub{margin:16px auto 0;max-width:48ch}
   .hero-cta{margin-top:28px;flex-direction:column;align-items:center;gap:14px}
   .hero-cta .btn{width:100%;max-width:330px;justify-content:center}
@@ -528,7 +528,7 @@ html.js .reveal.in{opacity:1;animation:revealRise .7s var(--ease) both}
   .t-mobile{display:inline}
   /* mascot: responsive, full body, no box; wide/short 16:9 stage = not too tall */
   .aquarium{width:auto;max-width:none;aspect-ratio:16/9;margin:0 auto 24px;
-    inline-size:clamp(260px,52vw,460px)}
+    inline-size:clamp(260px,52vw,420px)}
   .axo-stage{max-width:none}
   .axo-video{transform:scale(1.12)}
   .axo-hint{font-size:13px;top:-4%;padding:7px 13px}
@@ -549,7 +549,7 @@ html.js .reveal.in{opacity:1;animation:revealRise .7s var(--ease) both}
   .hero{padding:32px 0 56px}
   .hero-copy{max-width:380px}
   .hero-sub{max-width:34ch}
-  .aquarium{inline-size:clamp(220px,62vw,300px);margin-bottom:20px}
+  .aquarium{inline-size:clamp(220px,62vw,280px);margin-bottom:0}
   /* compact navbar */
   .nav-inner{height:64px;gap:10px}
   .nav-logo{height:32px}
