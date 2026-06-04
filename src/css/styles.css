@@ -546,10 +546,16 @@ html.js .reveal.in{opacity:1;animation:revealRise .7s var(--ease) both}
 @media(max-width:560px){
   .wrap{padding:0 20px}
   .section{padding:64px 0}
-  .hero{padding:32px 0 56px}
+  .hero{min-height:calc(100svh - 64px);padding:26px 0 64px}
+  .hero-grid{gap:20px}
+  .hero h1{font-size:2.28rem}
   .hero-copy{max-width:380px}
-  .hero-sub{max-width:34ch}
-  .aquarium{inline-size:clamp(220px,62vw,280px);margin-bottom:0}
+  .hero-sub{max-width:31ch;margin-top:14px;font-size:.98rem;line-height:1.55}
+  .hero-cta{margin-top:24px;gap:12px}
+  .hero-cta .btn{min-height:50px;max-width:300px;padding:13px 22px;font-size:.94rem}
+  .hero-tags{margin-top:20px;gap:8px 14px;font-size:.78rem;line-height:1.3}
+  .aquarium{inline-size:clamp(220px,64vw,270px);margin-top:-4px;margin-bottom:0}
+  .axo-hint{font-size:12px;top:-7%;padding:6px 12px}
   /* compact navbar */
   .nav-inner{height:64px;gap:10px}
   .nav-logo{height:32px}
