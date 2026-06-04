@@ -483,9 +483,15 @@ Desktop:
 - Right side: animated axolotl mascot / digital aquarium visual
 
 Mobile:
-- Logo and text first
-- Animation below text
+- Mascot animation first (above the headline)
+- Headline, subheadline, then CTA below the mascot
 - CTA buttons stacked or side-by-side depending on width
+
+Mobile mascot note:
+- iOS Safari does not get the transparent WebM video; it gets a clean static
+  WebP poster (start/wave) instead — avoids the green-screen/matte artifact.
+- No `filter: drop-shadow` on the iOS static poster (forces an opaque
+  compositing backing on WebKit → matte/ghost halo around the sprite).
 
 ### Background
 
@@ -744,7 +750,7 @@ Small animated axolotl peeking or floating with bubbles.
 ## Mobile
 
 - Hero becomes single-column.
-- Text comes first, animation second.
+- Mascot animation comes first, text second.
 - CTA buttons should be easy to tap.
 - Cards stack vertically.
 - Gallery can become horizontal scroll.

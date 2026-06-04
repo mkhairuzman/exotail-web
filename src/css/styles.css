@@ -523,8 +523,8 @@ html.js .reveal.in{opacity:1;animation:revealRise .7s var(--ease) both}
 @media(max-width:1024px){
   .hero{padding:44px 0 64px}
   .hero-grid{grid-template-columns:1fr;gap:34px;text-align:center}
-  .hero-copy{max-width:600px;margin-inline:auto}
-  .hero-visual{max-width:520px;margin-inline:auto}
+  .hero-copy{max-width:600px;margin-inline:auto;order:2}
+  .hero-visual{max-width:520px;margin-inline:auto;order:1}
   .hero-sub{margin:16px auto 0;max-width:48ch}
   .hero-cta{margin-top:28px;flex-direction:column;align-items:center;gap:14px}
   .hero-cta .btn{width:100%;max-width:330px;justify-content:center}
