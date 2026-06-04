@@ -256,6 +256,15 @@ ul{margin:0;padding:0;list-style:none}
 .axo-stage:hover .axo-reaction-bubble,.axo-stage:focus-within .axo-reaction-bubble{animation:axoPopBubble 1.5s ease-out infinite}
 .axo-stage:hover .axo-reaction-bubble.b2,.axo-stage:focus-within .axo-reaction-bubble.b2{animation-delay:.2s}
 .axo-stage:hover .axo-reaction-bubble.b3,.axo-stage:focus-within .axo-reaction-bubble.b3{animation-delay:.4s}
+.axo-stage.axo-mobile-poster-fallback .axo-img{
+  width:100%;height:100%;object-fit:contain;
+  animation:axoMobilePosterEntrance 1.05s cubic-bezier(.16,.9,.22,1.12) both,
+            axoFloat 6s ease-in-out 1.05s infinite;
+}
+.axo-stage.axo-static-wave .axo-img{
+  animation:axoStaticWave .95s cubic-bezier(.2,.8,.2,1) both,
+            axoFloat 6s ease-in-out .95s infinite;
+}
 
 /* image-load failure: neutral soft glow + Exotail icon — never the old mascot */
 .axo-stage.axo-failed .axo-glow{opacity:.75;animation-duration:4s}
@@ -264,6 +273,18 @@ ul{margin:0;padding:0;list-style:none}
 }
 
 @keyframes axoEntrance{0%{opacity:0;transform:translateY(28px) scale(.95)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes axoMobilePosterEntrance{
+  0%{opacity:0;transform:translate(84px,-18px) scale(.82) rotate(5deg)}
+  68%{opacity:1;transform:translate(-6px,5px) scale(1.04) rotate(-1.5deg)}
+  100%{opacity:1;transform:translate(0,0) scale(1) rotate(0)}
+}
+@keyframes axoStaticWave{
+  0%{transform:translateY(0) scale(1) rotate(0)}
+  18%{transform:translateY(-8px) scale(1.04) rotate(-4deg)}
+  42%{transform:translateY(-5px) scale(1.03) rotate(4deg)}
+  66%{transform:translateY(-7px) scale(1.035) rotate(-3deg)}
+  100%{transform:translateY(0) scale(1) rotate(0)}
+}
 @keyframes axoFloat{0%,100%{transform:translateY(0) scale(1) rotate(-1deg)}50%{transform:translateY(-14px) scale(1.02) rotate(1deg)}}
 @keyframes axoGlowPulse{0%,100%{opacity:.55;transform:translate(-50%,-50%) scale(1)}50%{opacity:.85;transform:translate(-50%,-50%) scale(1.07)}}
 @keyframes axoPopBubble{0%{opacity:0;transform:translate(0,8px) scale(.4)}18%{opacity:.95}100%{opacity:0;transform:translate(16px,-44px) scale(1.15)}}

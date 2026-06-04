@@ -37,7 +37,11 @@
    Click can play the transparent WebM wave layer once, then return to idle. */
 (function(){
   var PNG = '/assets/mascot/axolotl-mascot.png';
+  var IDLE_POSTER = '/animation/axolotl-video-idle-poster.png';
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var ua = navigator.userAgent || '';
+  var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var usePosterFallback = isIOS;
 
   document.querySelectorAll('.axo-mount').forEach(function(mount){
     var idleV = mount.querySelector('.axo-idle');
@@ -58,6 +62,17 @@
     });
     img.src = PNG;
     mount.appendChild(img);
+  }
+
+  function injectMascotPoster(mount, src){
+    var img = new Image();
+    img.className = 'axo-img axo-poster-img';
+    img.alt = 'Maskot axolotl Exotail';
+    img.decoding = 'async';
+    img.draggable = false;
+    img.src = src || IDLE_POSTER;
+    mount.appendChild(img);
+    return img;
   }
 
   function initVideoMascot(mount, startV, idleV){
@@ -97,6 +112,50 @@
     function hideHint(){
       clearTimeout(hintShowT); clearTimeout(hintHideT);
       stage.classList.remove('axo-hint-on');
+    }
+
+    if(usePosterFallback){
+      if(startV){ startV.remove(); }
+      if(idleV){ idleV.remove(); }
+      if(waveV){ waveV.remove(); waveV = null; }
+      var mobileImg = injectMascotPoster(mount, IDLE_POSTER);
+      var mobileStartDone = false;
+      stage.classList.add('axo-mobile-poster-fallback', 'axo-mobile-starting');
+
+      function mobileToIdle(){
+        if(mobileStartDone) return;
+        mobileStartDone = true;
+        stage.classList.remove('axo-mobile-starting');
+        stage.classList.add('axo-idle-on', 'axo-mobile-idle');
+        idleReady = true;
+        showHintSoon();
+      }
+
+      mobileImg.addEventListener('load', function(){ setTimeout(mobileToIdle, 1050); }, { once:true });
+      mobileImg.addEventListener('error', mobileToIdle, { once:true });
+      setTimeout(mobileToIdle, 1600);
+
+      function playMobileWave(){
+        if(!idleReady) return;
+        idleReady = false;
+        hideHint();
+        stage.classList.remove('axo-mobile-idle');
+        stage.classList.add('axo-mobile-waving', 'axo-static-wave');
+        setTimeout(function(){
+          stage.classList.remove('axo-mobile-waving', 'axo-static-wave');
+          stage.classList.add('axo-mobile-idle');
+          idleReady = true;
+        }, 950);
+      }
+
+      stage.addEventListener('click', playMobileWave);
+      stage.addEventListener('keydown', function(e){
+        if(e.key === 'Enter' || e.key === ' '){
+          e.preventDefault();
+          playMobileWave();
+        }
+      });
+      return;
     }
 
     // Reduced motion: just the idle pose.
