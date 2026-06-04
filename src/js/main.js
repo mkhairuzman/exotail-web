@@ -43,7 +43,13 @@
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var ua = navigator.userAgent || '';
   var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  var usePosterFallback = isIOS;
+  // WebKit (all iOS browsers + macOS Safari) plays VP9-alpha WebM but renders
+  // the alpha channel wrong → green/teal matte fringe around the mascot.
+  // navigator.vendor starts with "Apple" only on WebKit; Chrome/Firefox/Edge
+  // on non-Apple engines report "Google Inc."/"". Use the static WebP poster
+  // for any WebKit browser so the green-screen video never displays.
+  var isWebKit = /Apple/.test(navigator.vendor || '');
+  var usePosterFallback = isIOS || isWebKit;
 
   document.querySelectorAll('.axo-mount').forEach(function(mount){
     var idleV = mount.querySelector('.axo-idle');
