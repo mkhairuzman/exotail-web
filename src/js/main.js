@@ -58,6 +58,22 @@
                           !isApple && !isIOS && !/CriOS|FxiOS|EdgiOS/.test(ua);
   var usePosterFallback = !isGoodVideoEngine;
 
+  // Temporary diagnostic: open the site with #mdebug to see what this browser
+  // reports and which mascot path it takes. Remove once the mobile issue is fixed.
+  if (/mdebug/.test(location.hash)) {
+    var dbg = document.createElement('pre');
+    dbg.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999;margin:0;padding:10px;background:#000;color:#0f0;font:12px/1.4 monospace;white-space:pre-wrap;word-break:break-all;max-height:50vh;overflow:auto';
+    dbg.textContent =
+      'ua: ' + ua + '\n' +
+      'vendor: ' + vendor + '\n' +
+      'platform: ' + navigator.platform + '\n' +
+      'maxTouchPoints: ' + navigator.maxTouchPoints + '\n' +
+      'isApple: ' + isApple + ' | isIOS: ' + isIOS + '\n' +
+      'isGoodVideoEngine: ' + isGoodVideoEngine + '\n' +
+      'usePosterFallback (poster=no video): ' + usePosterFallback;
+    document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(dbg); });
+  }
+
   document.querySelectorAll('.axo-mount').forEach(function(mount){
     var idleV = mount.querySelector('.axo-idle');
     if(idleV){ initVideoMascot(mount, mount.querySelector('.axo-start'), idleV); }
