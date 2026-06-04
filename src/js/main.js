@@ -38,6 +38,8 @@
 (function(){
   var PNG = '/assets/mascot/axolotl-mascot.png';
   var IDLE_POSTER = '/animation/axolotl-video-idle-poster.png';
+  var MOBILE_START = '/animation/axolotl-start-mobile.webp';
+  var MOBILE_WAVE = '/animation/axolotl-wave-mobile.webp';
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var ua = navigator.userAgent || '';
   var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -118,7 +120,7 @@
       if(startV){ startV.remove(); }
       if(idleV){ idleV.remove(); }
       if(waveV){ waveV.remove(); waveV = null; }
-      var mobileImg = injectMascotPoster(mount, IDLE_POSTER);
+      var mobileImg = injectMascotPoster(mount, MOBILE_START);
       var mobileStartDone = false;
       stage.classList.add('axo-mobile-poster-fallback', 'axo-mobile-starting');
 
@@ -141,9 +143,11 @@
         hideHint();
         stage.classList.remove('axo-mobile-idle');
         stage.classList.add('axo-mobile-waving', 'axo-static-wave');
+        mobileImg.src = MOBILE_WAVE;
         setTimeout(function(){
           stage.classList.remove('axo-mobile-waving', 'axo-static-wave');
           stage.classList.add('axo-mobile-idle');
+          mobileImg.src = MOBILE_START;
           idleReady = true;
         }, 950);
       }
