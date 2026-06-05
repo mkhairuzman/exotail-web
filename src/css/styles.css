@@ -161,8 +161,18 @@ ul{margin:0;padding:0;list-style:none}
   display:grid;place-items:center;cursor:pointer;margin-inline:auto;
   transition:transform .5s cubic-bezier(.2,.7,.2,1.4);
   will-change:transform;
+  -webkit-tap-highlight-color:transparent;
+  -webkit-touch-callout:none;
+  user-select:none;
+  -webkit-user-select:none;
+  touch-action:manipulation;
+  appearance:none;
+  -webkit-appearance:none;
+  background:transparent;border:0;padding:0;box-shadow:none;
 }
-.axo-stage:focus-visible{outline:none}
+.axo-stage:focus{outline:none;background:transparent;box-shadow:none}
+.axo-stage:focus-visible{outline:2px solid rgba(114,242,229,.55);outline-offset:6px;border-radius:18px}
+.axo-stage:active{outline:none;background:transparent;border:0;box-shadow:none;transform:none}
 
 /* mount holds the mascot layers, centered. Entrance motion lives here so the
    same idle render is visible from the first frame. */
@@ -170,12 +180,18 @@ ul{margin:0;padding:0;list-style:none}
   display:grid;place-items:center;width:100%;height:100%;grid-template:1fr/1fr;
   transform-origin:50% 62%;
   will-change:transform,opacity;
+  -webkit-tap-highlight-color:transparent;
+  -webkit-touch-callout:none;
+  user-select:none;
+  -webkit-user-select:none;
+  background:transparent;
 }
 
 /* the one final mascot — entrance, then gentle idle float + breathe */
 .axo-img{
   grid-area:1/1;width:96%;height:96%;object-fit:contain;display:block;
   pointer-events:none;-webkit-user-drag:none;user-select:none;
+  -webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;
   filter:drop-shadow(0 22px 26px rgba(0,0,0,.4));
   transform-origin:50% 62%;
   animation:axoEntrance 1s cubic-bezier(.16,.9,.22,1.12) both,
@@ -190,8 +206,9 @@ ul{margin:0;padding:0;list-style:none}
 .axo-video{
   grid-area:1/1;width:100%;height:100%;object-fit:contain;display:block;background:transparent;
   pointer-events:none;-webkit-user-drag:none;
+  -webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;
   filter:drop-shadow(0 22px 26px rgba(0,0,0,.4));
-  transition:none;                 /* instant start->idle switch, no fade */
+  transition:opacity .2s ease;
   /* enlarge the mascot (~1.8x): the 16:9 frame has transparent margins, so
      scaling overflows harmlessly (no crop). Slight left bias keeps the
      right-entering swim away from the viewport edge. Both start + idle
@@ -199,15 +216,15 @@ ul{margin:0;padding:0;list-style:none}
   transform:translateX(-3%) scale(1.4);
   transform-origin:50% 52%;
 }
-.axo-start{z-index:3;opacity:0;visibility:hidden;transition:opacity .38s ease}
-.axo-idle{z-index:2;opacity:0;visibility:hidden}
-.axo-wave{z-index:4;opacity:0;visibility:hidden;transform:translateX(-3%) translateY(-2.2%) scale(1.33)}
-.axo-stage.axo-start-on .axo-start{opacity:1;visibility:visible}
-.axo-stage.axo-idle-on .axo-start{opacity:0;visibility:hidden}
-.axo-stage.axo-idle-on .axo-idle{opacity:1;visibility:visible}
-.axo-stage.axo-wave-on .axo-wave{opacity:1;visibility:visible}
-.axo-stage.axo-wave-on .axo-idle{opacity:0;visibility:hidden}
-.axo-stage.axo-wave-on .axo-start{opacity:0;visibility:hidden}
+.axo-start{z-index:3;opacity:0;visibility:visible;transition:opacity .22s ease}
+.axo-idle{z-index:2;opacity:0;visibility:visible}
+.axo-wave{z-index:4;opacity:0;visibility:visible;transform:translateX(-3%) translateY(-2.2%) scale(1.33)}
+.axo-stage.axo-start-on .axo-start{opacity:1}
+.axo-stage.axo-idle-on .axo-start{opacity:0}
+.axo-stage.axo-idle-on .axo-idle{opacity:1}
+.axo-stage.axo-wave-on .axo-wave{opacity:1}
+.axo-stage.axo-wave-on .axo-idle{opacity:0}
+.axo-stage.axo-wave-on .axo-start{opacity:0}
 
 /* "Klik aku!" hint bubble — centered ABOVE the mascot's head, tail pointing
    down. Shown briefly in idle state. */

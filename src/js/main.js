@@ -44,6 +44,7 @@
   var SEQUENCE_FRAMES = 157;
   var SEQUENCE_FPS = 30;
   var SEQUENCE_LOW_POWER_FPS = 24;
+  var SEQUENCE_SPEED = 1.3;
   var SEQUENCE_WIDTH = 640;
   var SEQUENCE_HEIGHT = 360;
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -79,6 +80,7 @@
       'isGoodVideoEngine: ' + isGoodVideoEngine + '\n' +
       'useSequenceFallback: ' + useSequenceFallback + '\n' +
       'sequencePlaybackFps: ' + getSequencePlaybackFps() + '\n' +
+      'sequenceSpeed: ' + SEQUENCE_SPEED + '\n' +
       'usePosterFallback (poster=no video): ' + usePosterFallback;
     document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(dbg); });
   }
@@ -182,7 +184,7 @@
     var surface = setupSequenceCanvas(canvas, frames[0]);
     if(!surface){ return function(){}; }
     var frameMs = 1000 / getSequencePlaybackFps();
-    var loopMs = frames.length * frameMs;
+    var loopMs = (frames.length * frameMs) / SEQUENCE_SPEED;
     var elapsedOffset = 0;
     var startedAt = 0;
     var rafId = 0;
@@ -194,7 +196,7 @@
     function tick(now){
       if(!running) return;
       var elapsed = (now - startedAt) % loopMs;
-      var idx = Math.floor(elapsed / frameMs) % frames.length;
+      var idx = Math.floor((elapsed * SEQUENCE_SPEED) / frameMs) % frames.length;
       if(idx !== lastIdx){
         surface.ctx.clearRect(0, 0, surface.canvas.width, surface.canvas.height);
         surface.ctx.drawImage(frames[idx], 0, 0, surface.canvas.width, surface.canvas.height);
@@ -251,23 +253,44 @@
   function initVideoMascot(mount, startV, idleV){
     var stage = mount.closest('.axo-stage');
     var waveV = mount.querySelector('.axo-wave');
-    var switched = false, idleReady = false;
+    var idleReady = false;
+    var mascotState = 'start';
+    var queuedWave = false;
+    var requestWave = function(){ queuedWave = true; };
     var START_OFFSET = 1.55;
 
-    idleV.muted = true;
+    [startV, idleV, waveV].forEach(function(v){
+      if(!v) return;
+      v.muted = true;
+      v.playsInline = true;
+      try { v.load(); } catch(e){}
+    });
     idleV.loop = true;
-    try { idleV.load(); } catch(e){}
 
-    var toIdle = function(){
-      if(switched) return;
-      switched = true;
+    function setVideoState(nextState){
+      mascotState = nextState;
+      stage.classList.toggle('axo-start-on', nextState === 'start');
+      stage.classList.toggle('axo-idle-on', nextState === 'idle' || nextState === 'returningToIdle');
+      stage.classList.toggle('axo-wave-on', nextState === 'wave');
+      stage.classList.toggle('axo-clicked', nextState === 'clicked');
+    }
+
+    function toIdle(){
+      if(mascotState !== 'start') return;
       var p = idleV.play();
       if(p && p.catch){ p.catch(function(){}); }
-      stage.classList.add('axo-idle-on');
+      setVideoState('returningToIdle');
       try { startV && startV.pause(); } catch(e){}
+      setTimeout(function(){
+        if(mascotState === 'returningToIdle'){ setVideoState('idle'); }
+      }, 220);
       idleReady = true;
       showHintSoon();                           // "Klik aku!" once idle begins
-    };
+      if(queuedWave){
+        queuedWave = false;
+        setTimeout(requestWave, 160);
+      }
+    }
 
     // ----- "Klik aku!" hint bubble (idle only) -----
     var HINT_DELAY = 1000, HINT_AUTOHIDE = 5500;
@@ -390,7 +413,7 @@
     if(reduce){
       if(startV){ startV.remove(); }
       if(waveV){ waveV.remove(); }
-      stage.classList.add('axo-idle-on');
+      setVideoState('idle');
       return;
     }
 
@@ -401,9 +424,9 @@
       startV.addEventListener('error', toIdle);
       var startShown = false;
       var showAndPlayStart = function(){
-        if(switched || startShown) return;
+        if(mascotState !== 'start' || startShown) return;
         startShown = true;
-        stage.classList.add('axo-start-on');
+        setVideoState('start');
         var startPlay = startV.play();
         if(startPlay && startPlay.catch){ startPlay.catch(toIdle); }
       };
@@ -421,44 +444,62 @@
 
     stage.addEventListener('mouseenter', hideHint);
     stage.addEventListener('focusin', hideHint);
+    stage.addEventListener('pointerdown', function(e){ e.preventDefault(); });
 
     if(waveV){
-      var waving = false;
       waveV.muted = true;
       try { waveV.load(); } catch(e){}
 
       function endWave(){
-        if(!waving) return;
+        if(mascotState !== 'wave') return;
         idleV.playbackRate = 1;
         try { idleV.currentTime = 0; } catch(e){}
         try {
           var idlePlay = idleV.play();
           if(idlePlay && idlePlay.catch){ idlePlay.catch(function(){}); }
         } catch(e){}
-        stage.classList.remove('axo-wave-on');
+        setVideoState('returningToIdle');
         try { waveV.pause(); } catch(e){}
-        waving = false;
+        setTimeout(function(){
+          if(mascotState === 'returningToIdle'){ setVideoState('idle'); }
+        }, 220);
       }
 
       function playWave(){
-        if(!idleReady || waving) return;
-        waving = true;
+        if(mascotState === 'start'){
+          queuedWave = true;
+          return;
+        }
+        if(!idleReady || mascotState === 'wave' || mascotState === 'clicked' || mascotState === 'returningToIdle') return;
         hideHint();
+        setVideoState('clicked');
         try { idleV.pause(); } catch(e){}
         try { waveV.currentTime = 0; } catch(e){}
         waveV.playbackRate = 1.2;
-        stage.classList.add('axo-wave-on');
-        try {
-          var wavePlay = waveV.play();
-          if(wavePlay && wavePlay.catch){ wavePlay.catch(endWave); }
-        } catch(e){ endWave(); }
+        setTimeout(function(){
+          if(mascotState !== 'clicked') return;
+          setVideoState('wave');
+          try {
+            var wavePlay = waveV.play();
+            if(wavePlay && wavePlay.catch){ wavePlay.catch(endWave); }
+          } catch(e){ endWave(); }
+        }, 80);
+      }
+      requestWave = playWave;
+
+      function onActivate(e){
+        if(e){
+          e.preventDefault();
+          if(e.stopPropagation){ e.stopPropagation(); }
+        }
+        playWave();
       }
 
       waveV.addEventListener('ended', endWave);
       waveV.addEventListener('error', endWave);
-      stage.addEventListener('click', playWave);
+      stage.addEventListener('click', onActivate);
       stage.addEventListener('keydown', function(e){
-        if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); playWave(); }
+        if(e.key === 'Enter' || e.key === ' '){ onActivate(e); }
       });
     }
   }
