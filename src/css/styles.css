@@ -267,6 +267,12 @@ ul{margin:0;padding:0;list-style:none}
   animation:axoMobilePosterEntrance 1.05s cubic-bezier(.16,.9,.22,1.12) both,
             axoFloat 6s ease-in-out 1.05s infinite;
 }
+.axo-stage.axo-ios-sequence .axo-sequence-img{
+  width:140%;height:140%;object-fit:contain;
+  filter:none;will-change:auto;background:transparent;
+  animation:none;
+  transform:translateX(-3%);
+}
 .axo-stage.axo-static-wave .axo-img{
   animation:axoStaticWave .95s cubic-bezier(.2,.8,.2,1) both,
             axoFloat 6s ease-in-out .95s infinite;
@@ -537,6 +543,7 @@ html.js .reveal.in{opacity:1;animation:revealRise .7s var(--ease) both}
     inline-size:clamp(260px,52vw,420px)}
   .axo-stage{max-width:none}
   .axo-video{transform:scale(1.12)}
+  .axo-stage.axo-ios-sequence .axo-sequence-img{width:112%;height:112%;transform:none}
   .axo-hint{font-size:13px;top:-4%;padding:7px 13px}
   /* calmer background on small screens */
   .aquarium .ring.r2{display:none}

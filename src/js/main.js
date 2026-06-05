@@ -40,6 +40,9 @@
   var IDLE_POSTER = '/animation/axolotl-video-idle-poster.png';
   var MOBILE_START = '/animation/axolotl-start-mobile.webp';
   var MOBILE_WAVE = '/animation/axolotl-wave-mobile.webp';
+  var SEQUENCE_PATH = '/animation/axolotl-hero-sequence/';
+  var SEQUENCE_FRAMES = 78;
+  var SEQUENCE_FPS = 15;
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var ua = navigator.userAgent || '';
   var vendor = navigator.vendor || '';
@@ -56,7 +59,8 @@
   // CriOS/FxiOS/EdgiOS are WebKit under the hood, so exclude them explicitly.
   var isGoodVideoEngine = /Chrome|Chromium|CriOS|Edg|Firefox|FxiOS/.test(ua) &&
                           !isApple && !isIOS && !/CriOS|FxiOS|EdgiOS/.test(ua);
-  var usePosterFallback = !isGoodVideoEngine;
+  var useSequenceFallback = isIOS;
+  var usePosterFallback = !isGoodVideoEngine && !useSequenceFallback;
 
   // Temporary diagnostic: open the site with #mdebug to see what this browser
   // reports and which mascot path it takes. Remove once the mobile issue is fixed.
@@ -70,6 +74,7 @@
       'maxTouchPoints: ' + navigator.maxTouchPoints + '\n' +
       'isApple: ' + isApple + ' | isIOS: ' + isIOS + '\n' +
       'isGoodVideoEngine: ' + isGoodVideoEngine + '\n' +
+      'useSequenceFallback: ' + useSequenceFallback + '\n' +
       'usePosterFallback (poster=no video): ' + usePosterFallback;
     document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(dbg); });
   }
@@ -104,6 +109,61 @@
     img.src = src || IDLE_POSTER;
     mount.appendChild(img);
     return img;
+  }
+
+  function frameSrc(index){
+    return SEQUENCE_PATH + 'frame_' + String(index).padStart(4, '0') + '.png';
+  }
+
+  function injectSequenceImage(mount){
+    var img = new Image();
+    img.className = 'axo-img axo-sequence-img';
+    img.alt = 'Maskot axolotl Exotail';
+    img.decoding = 'async';
+    img.draggable = false;
+    img.width = 900;
+    img.height = 506;
+    img.src = frameSrc(1);
+    mount.appendChild(img);
+    return img;
+  }
+
+  function preloadSequence(onReady, onError){
+    var frames = [];
+    var loaded = 0;
+    var failed = false;
+
+    for(var i = 1; i <= SEQUENCE_FRAMES; i++){
+      var img = new Image();
+      img.decoding = 'async';
+      img.onload = function(){
+        loaded += 1;
+        if(loaded === SEQUENCE_FRAMES && !failed){ onReady(frames); }
+      };
+      img.onerror = function(){
+        if(failed) return;
+        failed = true;
+        onError();
+      };
+      img.src = frameSrc(i);
+      frames.push(img);
+    }
+  }
+
+  function startSequenceLoop(img, frames){
+    var start = null;
+    var frameMs = 1000 / SEQUENCE_FPS;
+    var rafId = 0;
+
+    function tick(now){
+      if(start == null){ start = now; }
+      var idx = Math.floor((now - start) / frameMs) % frames.length;
+      img.src = frames[idx].src;
+      rafId = requestAnimationFrame(tick);
+    }
+
+    rafId = requestAnimationFrame(tick);
+    return function(){ cancelAnimationFrame(rafId); };
   }
 
   function initVideoMascot(mount, startV, idleV){
@@ -143,6 +203,53 @@
     function hideHint(){
       clearTimeout(hintShowT); clearTimeout(hintHideT);
       stage.classList.remove('axo-hint-on');
+    }
+
+    if(useSequenceFallback){
+      if(startV){ startV.remove(); }
+      if(idleV){ idleV.remove(); }
+      if(waveV){ waveV.remove(); waveV = null; }
+      var sequenceImg = injectSequenceImage(mount);
+      var startLoop = null;
+      var stopLoop = null;
+      stage.classList.add('axo-ios-sequence', 'axo-idle-on');
+
+      if(reduce){
+        idleReady = true;
+        return;
+      }
+
+      startLoop = function(){
+        if(stopLoop) return;
+        preloadSequence(function(frames){
+          stopLoop = startSequenceLoop(sequenceImg, frames);
+          idleReady = true;
+          showHintSoon();
+        }, function(){
+          stage.classList.add('axo-failed');
+          sequenceImg.src = IDLE_POSTER;
+          idleReady = true;
+          showHintSoon();
+        });
+      };
+
+      (window.requestIdleCallback || function(cb){ return setTimeout(cb, 80); })(startLoop);
+
+      function playSequenceTap(){
+        if(!idleReady) return;
+        hideHint();
+        stage.classList.add('axo-static-wave');
+        setTimeout(function(){ stage.classList.remove('axo-static-wave'); }, 950);
+      }
+
+      stage.addEventListener('click', playSequenceTap);
+      stage.addEventListener('keydown', function(e){
+        if(e.key === 'Enter' || e.key === ' '){
+          e.preventDefault();
+          playSequenceTap();
+        }
+      });
+      return;
     }
 
     if(usePosterFallback){
@@ -380,4 +487,3 @@
     buildDots();
   })();
 })();
-
