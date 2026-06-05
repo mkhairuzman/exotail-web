@@ -41,11 +41,11 @@
   var MOBILE_START = '/animation/axolotl-start-mobile.webp';
   var MOBILE_WAVE = '/animation/axolotl-wave-mobile.webp';
   var SEQUENCE_PATH = '/animation/axolotl-hero-sequence/';
-  var SEQUENCE_FRAMES = 126;
-  var SEQUENCE_FPS = 24;
-  var SEQUENCE_LOW_POWER_FPS = 20;
-  var SEQUENCE_WIDTH = 800;
-  var SEQUENCE_HEIGHT = 450;
+  var SEQUENCE_FRAMES = 157;
+  var SEQUENCE_FPS = 30;
+  var SEQUENCE_LOW_POWER_FPS = 24;
+  var SEQUENCE_WIDTH = 640;
+  var SEQUENCE_HEIGHT = 360;
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var ua = navigator.userAgent || '';
   var vendor = navigator.vendor || '';
@@ -164,43 +164,88 @@
   }
 
   function setupSequenceCanvas(canvas, firstFrame){
-    var dpr = Math.min(window.devicePixelRatio || 1, 2);
-    var cssWidth = SEQUENCE_WIDTH;
-    var cssHeight = SEQUENCE_HEIGHT;
+    var width = SEQUENCE_WIDTH;
+    var height = SEQUENCE_HEIGHT;
     var ctx = canvas.getContext('2d', { alpha: true });
 
-    canvas.width = Math.round(cssWidth * dpr);
-    canvas.height = Math.round(cssHeight * dpr);
-    canvas.style.aspectRatio = cssWidth + ' / ' + cssHeight;
+    canvas.width = width;
+    canvas.height = height;
+    canvas.style.aspectRatio = width + ' / ' + height;
 
     if(!ctx){ return null; }
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, cssWidth, cssHeight);
-    if(firstFrame){ ctx.drawImage(firstFrame, 0, 0, cssWidth, cssHeight); }
-    return { ctx: ctx, width: cssWidth, height: cssHeight };
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if(firstFrame){ ctx.drawImage(firstFrame, 0, 0, canvas.width, canvas.height); }
+    return { ctx: ctx, canvas: canvas };
   }
 
-  function startSequenceLoop(canvas, frames){
+  function startSequenceLoop(canvas, frames, stage){
     var surface = setupSequenceCanvas(canvas, frames[0]);
     if(!surface){ return function(){}; }
-    var start = null;
     var frameMs = 1000 / getSequencePlaybackFps();
+    var loopMs = frames.length * frameMs;
+    var elapsedOffset = 0;
+    var startedAt = 0;
     var rafId = 0;
     var lastIdx = -1;
+    var running = false;
+    var visible = true;
+    var pageVisible = !document.hidden;
 
     function tick(now){
-      if(start == null){ start = now; }
-      var idx = Math.floor((now - start) / frameMs) % frames.length;
+      if(!running) return;
+      var elapsed = (now - startedAt) % loopMs;
+      var idx = Math.floor(elapsed / frameMs) % frames.length;
       if(idx !== lastIdx){
-        surface.ctx.clearRect(0, 0, surface.width, surface.height);
-        surface.ctx.drawImage(frames[idx], 0, 0, surface.width, surface.height);
+        surface.ctx.clearRect(0, 0, surface.canvas.width, surface.canvas.height);
+        surface.ctx.drawImage(frames[idx], 0, 0, surface.canvas.width, surface.canvas.height);
         lastIdx = idx;
       }
       rafId = requestAnimationFrame(tick);
     }
 
-    rafId = requestAnimationFrame(tick);
-    return function(){ cancelAnimationFrame(rafId); };
+    function start(){
+      if(running || !visible || !pageVisible) return;
+      running = true;
+      startedAt = performance.now() - elapsedOffset;
+      rafId = requestAnimationFrame(tick);
+    }
+
+    function stop(){
+      if(!running) return;
+      running = false;
+      cancelAnimationFrame(rafId);
+      elapsedOffset = (performance.now() - startedAt) % loopMs;
+    }
+
+    function sync(){
+      if(visible && pageVisible){ start(); }
+      else { stop(); }
+    }
+
+    var io = null;
+    if('IntersectionObserver' in window){
+      io = new IntersectionObserver(function(entries){
+        visible = entries[0] && entries[0].isIntersecting;
+        sync();
+      }, { threshold: 0.01 });
+      io.observe(stage || canvas);
+    }
+
+    function onVisibilityChange(){
+      pageVisible = !document.hidden;
+      sync();
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('pagehide', stop);
+    sync();
+
+    return function(){
+      stop();
+      if(io){ io.disconnect(); }
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pagehide', stop);
+    };
   }
 
   function initVideoMascot(mount, startV, idleV){
@@ -266,7 +311,7 @@
       startLoop = function(){
         if(stopLoop) return;
         preloadSequence().then(function(frames){
-          stopLoop = startSequenceLoop(sequenceCanvas, frames);
+          stopLoop = startSequenceLoop(sequenceCanvas, frames, stage);
           idleReady = true;
           showHintSoon();
         }).catch(function(){
