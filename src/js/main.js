@@ -263,6 +263,8 @@
       if(!v) return;
       v.muted = true;
       v.playsInline = true;
+      v.controls = false;
+      try { v.disablePictureInPicture = true; } catch(e){}
       try { v.load(); } catch(e){}
     });
     idleV.loop = true;
@@ -270,26 +272,59 @@
     function setVideoState(nextState){
       mascotState = nextState;
       stage.classList.toggle('axo-start-on', nextState === 'start');
-      stage.classList.toggle('axo-idle-on', nextState === 'idle' || nextState === 'returningToIdle');
+      stage.classList.toggle('axo-idle-on', nextState === 'idle');
       stage.classList.toggle('axo-wave-on', nextState === 'wave');
-      stage.classList.toggle('axo-clicked', nextState === 'clicked');
     }
 
-    function toIdle(){
-      if(mascotState !== 'start') return;
-      var p = idleV.play();
-      if(p && p.catch){ p.catch(function(){}); }
-      setVideoState('returningToIdle');
-      try { startV && startV.pause(); } catch(e){}
-      setTimeout(function(){
-        if(mascotState === 'returningToIdle'){ setVideoState('idle'); }
-      }, 220);
-      idleReady = true;
-      showHintSoon();                           // "Klik aku!" once idle begins
-      if(queuedWave){
-        queuedWave = false;
-        setTimeout(requestWave, 160);
-      }
+    function waitVideoReady(video){
+      if(!video || video.readyState >= 2){ return Promise.resolve(); }
+      return new Promise(function(resolve){
+        var done = function(){
+          video.removeEventListener('loadeddata', done);
+          video.removeEventListener('canplay', done);
+          video.removeEventListener('error', done);
+          resolve();
+        };
+        video.addEventListener('loadeddata', done, { once:true });
+        video.addEventListener('canplay', done, { once:true });
+        video.addEventListener('error', done, { once:true });
+        setTimeout(done, 1200);
+      });
+    }
+
+    function playVideo(video){
+      if(!video){ return Promise.resolve(); }
+      var play = video.play();
+      if(play && play.catch){ return play.catch(function(){}); }
+      return Promise.resolve();
+    }
+
+    function switchVideoInstant(nextState, targetVideo, previousVideo){
+      return waitVideoReady(targetVideo)
+        .then(function(){ return playVideo(targetVideo); })
+        .then(function(){
+          requestAnimationFrame(function(){
+            setVideoState(nextState);
+            requestAnimationFrame(function(){
+              if(previousVideo && previousVideo !== targetVideo){
+                try { previousVideo.pause(); } catch(e){}
+              }
+            });
+          });
+        });
+    }
+
+    function switchToIdle(previousVideo){
+      try { idleV.currentTime = 0; } catch(e){}
+      idleV.playbackRate = 1;
+      return switchVideoInstant('idle', idleV, previousVideo).then(function(){
+        idleReady = true;
+        showHintSoon();                         // "Klik aku!" once idle begins
+        if(queuedWave){
+          queuedWave = false;
+          setTimeout(requestWave, 80);
+        }
+      });
     }
 
     // ----- "Klik aku!" hint bubble (idle only) -----
@@ -414,55 +449,48 @@
       if(startV){ startV.remove(); }
       if(waveV){ waveV.remove(); }
       setVideoState('idle');
+      playVideo(idleV);
       return;
     }
 
     if(startV){
-      startV.muted = true;
-      try { startV.load(); } catch(e){}
-      startV.addEventListener('ended', toIdle);
-      startV.addEventListener('error', toIdle);
       var startShown = false;
       var showAndPlayStart = function(){
         if(mascotState !== 'start' || startShown) return;
         startShown = true;
-        setVideoState('start');
-        var startPlay = startV.play();
-        if(startPlay && startPlay.catch){ startPlay.catch(toIdle); }
+        waitVideoReady(idleV);
+        waitVideoReady(startV)
+          .then(function(){ return playVideo(startV); })
+          .then(function(){
+            requestAnimationFrame(function(){ setVideoState('start'); });
+          });
       };
       var seekAndPlayStart = function(){
         try { startV.currentTime = START_OFFSET; } catch(e){}
         startV.addEventListener('seeked', showAndPlayStart, { once:true });
         setTimeout(showAndPlayStart, 450);
       };
+      startV.addEventListener('ended', function(){
+        if(mascotState === 'start'){ switchToIdle(startV); }
+      });
+      startV.addEventListener('error', function(){ switchToIdle(startV); });
       if(startV.readyState >= 1){ seekAndPlayStart(); }
       else { startV.addEventListener('loadedmetadata', seekAndPlayStart, { once:true }); }
-      setTimeout(toIdle, 12000);
+      setTimeout(function(){
+        if(mascotState === 'start'){ switchToIdle(startV); }
+      }, 12000);
     } else {
-      toIdle();
+      switchToIdle(null);
     }
 
     stage.addEventListener('mouseenter', hideHint);
     stage.addEventListener('focusin', hideHint);
-    stage.addEventListener('pointerdown', function(e){ e.preventDefault(); });
+    stage.addEventListener('pointerdown', function(){ stage.blur(); });
 
     if(waveV){
-      waveV.muted = true;
-      try { waveV.load(); } catch(e){}
-
       function endWave(){
         if(mascotState !== 'wave') return;
-        idleV.playbackRate = 1;
-        try { idleV.currentTime = 0; } catch(e){}
-        try {
-          var idlePlay = idleV.play();
-          if(idlePlay && idlePlay.catch){ idlePlay.catch(function(){}); }
-        } catch(e){}
-        setVideoState('returningToIdle');
-        try { waveV.pause(); } catch(e){}
-        setTimeout(function(){
-          if(mascotState === 'returningToIdle'){ setVideoState('idle'); }
-        }, 220);
+        switchToIdle(waveV);
       }
 
       function playWave(){
@@ -470,20 +498,12 @@
           queuedWave = true;
           return;
         }
-        if(!idleReady || mascotState === 'wave' || mascotState === 'clicked' || mascotState === 'returningToIdle') return;
+        if(!idleReady || mascotState === 'wave') return;
+        idleReady = false;
         hideHint();
-        setVideoState('clicked');
-        try { idleV.pause(); } catch(e){}
         try { waveV.currentTime = 0; } catch(e){}
         waveV.playbackRate = 1.2;
-        setTimeout(function(){
-          if(mascotState !== 'clicked') return;
-          setVideoState('wave');
-          try {
-            var wavePlay = waveV.play();
-            if(wavePlay && wavePlay.catch){ wavePlay.catch(endWave); }
-          } catch(e){ endWave(); }
-        }, 80);
+        switchVideoInstant('wave', waveV, idleV).catch(endWave);
       }
       requestWave = playWave;
 

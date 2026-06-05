@@ -171,8 +171,11 @@ ul{margin:0;padding:0;list-style:none}
   background:transparent;border:0;padding:0;box-shadow:none;
 }
 .axo-stage:focus{outline:none;background:transparent;box-shadow:none}
-.axo-stage:focus-visible{outline:2px solid rgba(114,242,229,.55);outline-offset:6px;border-radius:18px}
+.axo-stage:focus-visible{outline:none;background:transparent;box-shadow:none}
 .axo-stage:active{outline:none;background:transparent;border:0;box-shadow:none;transform:none}
+@media(hover:hover) and (pointer:fine){
+  .axo-stage:focus-visible{outline:2px solid rgba(114,242,229,.55);outline-offset:6px;border-radius:18px}
+}
 
 /* mount holds the mascot layers, centered. Entrance motion lives here so the
    same idle render is visible from the first frame. */
@@ -208,7 +211,7 @@ ul{margin:0;padding:0;list-style:none}
   pointer-events:none;-webkit-user-drag:none;
   -webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;
   filter:drop-shadow(0 22px 26px rgba(0,0,0,.4));
-  transition:opacity .2s ease;
+  transition:none;
   /* enlarge the mascot (~1.8x): the 16:9 frame has transparent margins, so
      scaling overflows harmlessly (no crop). Slight left bias keeps the
      right-entering swim away from the viewport edge. Both start + idle
@@ -216,13 +219,13 @@ ul{margin:0;padding:0;list-style:none}
   transform:translateX(-3%) scale(1.4);
   transform-origin:50% 52%;
 }
-.axo-start{z-index:3;opacity:0;visibility:visible;transition:opacity .22s ease}
-.axo-idle{z-index:2;opacity:0;visibility:visible}
-.axo-wave{z-index:4;opacity:0;visibility:visible;transform:translateX(-3%) translateY(-2.2%) scale(1.33)}
-.axo-stage.axo-start-on .axo-start{opacity:1}
+.axo-start{z-index:3;opacity:0;visibility:hidden;transition:none}
+.axo-idle{z-index:2;opacity:0;visibility:hidden}
+.axo-wave{z-index:4;opacity:0;visibility:hidden;transform:translateX(-3%) translateY(-2.2%) scale(1.33)}
+.axo-stage.axo-start-on .axo-start{opacity:1;visibility:visible}
 .axo-stage.axo-idle-on .axo-start{opacity:0}
-.axo-stage.axo-idle-on .axo-idle{opacity:1}
-.axo-stage.axo-wave-on .axo-wave{opacity:1}
+.axo-stage.axo-idle-on .axo-idle{opacity:1;visibility:visible}
+.axo-stage.axo-wave-on .axo-wave{opacity:1;visibility:visible}
 .axo-stage.axo-wave-on .axo-idle{opacity:0}
 .axo-stage.axo-wave-on .axo-start{opacity:0}
 
