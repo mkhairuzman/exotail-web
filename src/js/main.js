@@ -41,8 +41,11 @@
   var MOBILE_START = '/animation/axolotl-start-mobile.webp';
   var MOBILE_WAVE = '/animation/axolotl-wave-mobile.webp';
   var SEQUENCE_PATH = '/animation/axolotl-hero-sequence/';
-  var SEQUENCE_FRAMES = 78;
-  var SEQUENCE_FPS = 15;
+  var SEQUENCE_FRAMES = 126;
+  var SEQUENCE_FPS = 24;
+  var SEQUENCE_LOW_POWER_FPS = 20;
+  var SEQUENCE_WIDTH = 800;
+  var SEQUENCE_HEIGHT = 450;
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var ua = navigator.userAgent || '';
   var vendor = navigator.vendor || '';
@@ -75,6 +78,7 @@
       'isApple: ' + isApple + ' | isIOS: ' + isIOS + '\n' +
       'isGoodVideoEngine: ' + isGoodVideoEngine + '\n' +
       'useSequenceFallback: ' + useSequenceFallback + '\n' +
+      'sequencePlaybackFps: ' + getSequencePlaybackFps() + '\n' +
       'usePosterFallback (poster=no video): ' + usePosterFallback;
     document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(dbg); });
   }
@@ -115,50 +119,83 @@
     return SEQUENCE_PATH + 'frame_' + String(index).padStart(4, '0') + '.png';
   }
 
-  function injectSequenceImage(mount){
-    var img = new Image();
-    img.className = 'axo-img axo-sequence-img';
-    img.alt = 'Maskot axolotl Exotail';
-    img.decoding = 'async';
-    img.draggable = false;
-    img.width = 900;
-    img.height = 506;
-    img.src = frameSrc(1);
-    mount.appendChild(img);
-    return img;
+  function getSequencePlaybackFps(){
+    return navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4 ? SEQUENCE_LOW_POWER_FPS : SEQUENCE_FPS;
   }
 
-  function preloadSequence(onReady, onError){
+  function injectSequenceCanvas(mount){
+    var canvas = document.createElement('canvas');
+    canvas.className = 'axo-img axo-sequence-canvas';
+    canvas.width = SEQUENCE_WIDTH;
+    canvas.height = SEQUENCE_HEIGHT;
+    canvas.setAttribute('aria-label', 'Maskot axolotl Exotail');
+    canvas.setAttribute('role', 'img');
+    mount.appendChild(canvas);
+    return canvas;
+  }
+
+  function decodeFrame(img){
+    if(img.decode){
+      return img.decode().catch(function(){
+        if(img.complete && img.naturalWidth > 0){ return; }
+        return Promise.reject(new Error('Unable to decode sequence frame'));
+      });
+    }
+    if(img.complete){ return Promise.resolve(); }
+    return new Promise(function(resolve, reject){
+      img.onload = resolve;
+      img.onerror = reject;
+    });
+  }
+
+  function preloadSequence(){
     var frames = [];
-    var loaded = 0;
-    var failed = false;
+    var promises = [];
 
     for(var i = 1; i <= SEQUENCE_FRAMES; i++){
       var img = new Image();
       img.decoding = 'async';
-      img.onload = function(){
-        loaded += 1;
-        if(loaded === SEQUENCE_FRAMES && !failed){ onReady(frames); }
-      };
-      img.onerror = function(){
-        if(failed) return;
-        failed = true;
-        onError();
-      };
       img.src = frameSrc(i);
       frames.push(img);
+      promises.push(decodeFrame(img));
     }
+
+    return Promise.all(promises).then(function(){ return frames; });
   }
 
-  function startSequenceLoop(img, frames){
+  function setupSequenceCanvas(canvas, firstFrame){
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var cssWidth = SEQUENCE_WIDTH;
+    var cssHeight = SEQUENCE_HEIGHT;
+    var ctx = canvas.getContext('2d', { alpha: true });
+
+    canvas.width = Math.round(cssWidth * dpr);
+    canvas.height = Math.round(cssHeight * dpr);
+    canvas.style.aspectRatio = cssWidth + ' / ' + cssHeight;
+
+    if(!ctx){ return null; }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssWidth, cssHeight);
+    if(firstFrame){ ctx.drawImage(firstFrame, 0, 0, cssWidth, cssHeight); }
+    return { ctx: ctx, width: cssWidth, height: cssHeight };
+  }
+
+  function startSequenceLoop(canvas, frames){
+    var surface = setupSequenceCanvas(canvas, frames[0]);
+    if(!surface){ return function(){}; }
     var start = null;
-    var frameMs = 1000 / SEQUENCE_FPS;
+    var frameMs = 1000 / getSequencePlaybackFps();
     var rafId = 0;
+    var lastIdx = -1;
 
     function tick(now){
       if(start == null){ start = now; }
       var idx = Math.floor((now - start) / frameMs) % frames.length;
-      img.src = frames[idx].src;
+      if(idx !== lastIdx){
+        surface.ctx.clearRect(0, 0, surface.width, surface.height);
+        surface.ctx.drawImage(frames[idx], 0, 0, surface.width, surface.height);
+        lastIdx = idx;
+      }
       rafId = requestAnimationFrame(tick);
     }
 
@@ -209,10 +246,17 @@
       if(startV){ startV.remove(); }
       if(idleV){ idleV.remove(); }
       if(waveV){ waveV.remove(); waveV = null; }
-      var sequenceImg = injectSequenceImage(mount);
+      var sequenceCanvas = injectSequenceCanvas(mount);
       var startLoop = null;
       var stopLoop = null;
       stage.classList.add('axo-ios-sequence', 'axo-idle-on');
+      var firstFrame = new Image();
+      firstFrame.decoding = 'async';
+      function drawFirstFrame(){ setupSequenceCanvas(sequenceCanvas, firstFrame); }
+      firstFrame.src = frameSrc(1);
+      if(firstFrame.decode){ firstFrame.decode().then(drawFirstFrame).catch(function(){}); }
+      else if(firstFrame.complete){ drawFirstFrame(); }
+      else { firstFrame.onload = drawFirstFrame; }
 
       if(reduce){
         idleReady = true;
@@ -221,13 +265,12 @@
 
       startLoop = function(){
         if(stopLoop) return;
-        preloadSequence(function(frames){
-          stopLoop = startSequenceLoop(sequenceImg, frames);
+        preloadSequence().then(function(frames){
+          stopLoop = startSequenceLoop(sequenceCanvas, frames);
           idleReady = true;
           showHintSoon();
-        }, function(){
+        }).catch(function(){
           stage.classList.add('axo-failed');
-          sequenceImg.src = IDLE_POSTER;
           idleReady = true;
           showHintSoon();
         });
