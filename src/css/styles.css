@@ -269,7 +269,7 @@ ul{margin:0;padding:0;list-style:none}
 }
 .axo-stage.axo-ios-sequence .axo-sequence-img{
   width:140%;height:140%;object-fit:contain;
-  filter:none;will-change:auto;background:transparent;
+  filter:none;will-change:auto;background:transparent;mix-blend-mode:normal;
   animation:none;
   transform:translateX(-3%);
 }
